@@ -49,7 +49,7 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 
 # create pytorch data object with dataset
-data = dp.TurbDataset()
+data = dp.PresDataset()
 trainLoader = DataLoader(data, batch_size=batch_size, shuffle=True, drop_last=True)
 print("Training batches: {}".format(len(trainLoader)))
 dataValidation = dp.ValiDataset(data)

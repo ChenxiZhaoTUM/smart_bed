@@ -189,32 +189,31 @@ def save_data_from_files(data, isTest=False, shuffle=2):
     print("Number of data loaded:", len(all_common_data))
 
 
-def data_reader(data, isTest=False, shuffle=2, batch_size=0):
-    save_data_from_files(data, isTest=isTest, shuffle=shuffle)
-    data.common_data = {}
-
+def data_readeri(index):
+    single_common_data = {}
     with open('all_common_data.txt', 'r') as file:
-        for _ in range(batch_size):
-            line = file.readline().strip()
-            elements = line.split()
-            # print(len(elements))  # test code
+        for i, line in enumerate(file):
+            if i == index:
+                line = file.readline().strip()
+                elements = line.split()
+                # print(len(elements))  # test code
 
-            common_data_id = int(elements[0])
-            time = elements[1]
-            input_data = elements[2:22]
-            input_data = np.array(input_data, dtype=float)
+                common_data_id = int(elements[0])
+                time = elements[1]
+                input_data = elements[2:22]
+                input_data = np.array(input_data, dtype=float)
 
-            target_data = elements[22:]
-            target_data = np.array(target_data, dtype=float)
-            target_data = np.reshape(target_data, (32, 64))
+                target_data = elements[22:]
+                target_data = np.array(target_data, dtype=float)
+                target_data = np.reshape(target_data, (32, 64))
 
-            data.common_data[common_data_id] = {
-                'time': time,
-                'input_data': input_data,
-                'target_data': target_data
-            }
+                single_common_data[common_data_id] = {
+                    'time': time,
+                    'input_data': input_data,
+                    'target_data': target_data
+                }
 
-    return data
+    return single_common_data
 
 
 ######## data normalization ########
@@ -255,12 +254,12 @@ def loader_normalizer(data):
     return data
 
 
-class TurbDataset(Dataset):
+class PresDataset(Dataset):
     TRAIN = 0
     TEST = 2
 
     def __init__(self, mode=TRAIN, dataDir="./dataset/for_train/", dataDirTest="./dataset/for_test/",
-                 shuffle=3, batch_size=5):
+                 shuffle=3):
         global removePOffset, pressureNormalization
         """
         :param dataProp: for split&mix from multiple dirs, see LoaderNormalizer; None means off
@@ -277,22 +276,13 @@ class TurbDataset(Dataset):
         self.dataDir = dataDir
         self.dataDirTest = dataDirTest  # only for mode==self.TEST
 
-        self = data_reader(self, isTest=(mode == self.TEST), shuffle=shuffle, batch_size=batch_size)
+        save_data_from_files(self, isTest=(mode == self.TEST), shuffle=shuffle)
+        self.common_data = {}
+
+        # self = data_reader(self, isTest=(mode == self.TEST), shuffle=shuffle, batch_size=size)
 
         # load & normalize data
         self = loader_normalizer(self)
-
-        ######### test code ########
-        # for common_data_id, data in self.common_data.items():
-        #     time = data['time']
-        #     input_data = data['input_data']
-        #     target_data = data['target_data']
-        #
-        #     print(f"Common Data ID: {common_data_id}")
-        #     print(f"Time: {time}")
-        #     # print(f"Input Data: {input_data}")
-        #     # print(f"Target Data: {target_data}")
-        #     print()
 
         self.totalLength = len(self.common_data)
         if not self.mode == self.TEST:
@@ -335,7 +325,11 @@ class TurbDataset(Dataset):
         return self.totalLength
 
     def __getitem__(self, idx):
-        return self.inputs[idx], self.targets[idx]
+        singleValue = data_readeri(idx)
+        value = singleValue[idx]
+        input_data = value['input_data']
+        target_data = value['target_data']
+        return input_data, target_data
 
     def denormalize(self, np_array):
         denormalized_data = np_array * (self.target_max - self.target_min) + self.target_min
@@ -354,7 +348,7 @@ class TurbDataset(Dataset):
 
 
 # simplified validation data set (main one is TurbDataset above)
-class ValiDataset(TurbDataset):
+class ValiDataset(PresDataset):
     def __init__(self, dataset):
         self.inputs = dataset.valiInputs
         self.targets = dataset.valiTargets
