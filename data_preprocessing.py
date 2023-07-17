@@ -115,13 +115,16 @@ def reshape_output_value(value_arr):
     return new_reshape_value_arr
 
 
-def save_data_from_files(data, isTest=False):
+def save_data_from_files(data, isTest=False, shuffle=2):
     if isTest:
         folder_path = data.dataDirTest
         file_names = os.listdir(data.dataDirTest)
     else:
         folder_path = data.dataDir
         file_names = os.listdir(data.dataDir)
+
+    for i in range(shuffle):
+        random.shuffle(file_names)
 
     all_common_data = {}
     print()
@@ -181,7 +184,7 @@ def save_data_from_files(data, isTest=False):
 
 
 ######## data normalization ########
-def loader_normalizer(data, shuffle=2):
+def loader_normalizer(data):
     if removePOffset:
         input_data_values = [value['input_data'] for value in data.common_data.values() if
                              len(value['input_data']) > 0]
@@ -211,8 +214,6 @@ def loader_normalizer(data, shuffle=2):
             print("Min Pressure:" + str(data.target_min))
 
     values = list(data.common_data.values())
-    # # for i in range(shuffle):
-    # random.shuffle(values)
 
     for id, value in enumerate(values):
         data.common_data[id] = value
@@ -225,7 +226,7 @@ class TurbDataset(Dataset):
     TEST = 2
 
     def __init__(self, mode=TRAIN, dataDir="./dataset/for_train/", dataDirTest="./dataset/for_test/",
-                 shuffle=0):
+                 shuffle=3):
         global removePOffset, pressureNormalization
         """
         :param dataProp: for split&mix from multiple dirs, see LoaderNormalizer; None means off
@@ -242,10 +243,10 @@ class TurbDataset(Dataset):
         self.dataDir = dataDir
         self.dataDirTest = dataDirTest  # only for mode==self.TEST
 
-        self = save_data_from_files(self, isTest=(mode == self.TEST))
+        self = save_data_from_files(self, isTest=(mode == self.TEST), shuffle=shuffle)
 
         # load & normalize data
-        self = loader_normalizer(self, shuffle=shuffle)
+        self = loader_normalizer(self)
 
         ######### test code ########
         # for common_data_id, data in self.common_data.items():
