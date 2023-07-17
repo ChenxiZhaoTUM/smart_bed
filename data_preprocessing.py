@@ -175,10 +175,44 @@ def save_data_from_files(data, isTest=False, shuffle=2):
                         'target_data': target_data
                     }
 
-    data.common_data = all_common_data
+    with open('all_common_data.txt', 'w') as file:
+        for common_data_id, value in all_common_data.items():
+            common_data_id_str = str(common_data_id)
+            time_str = value['time']
+            input_data_str = ' '.join(str(x) for x in value['input_data'])
+            target_data_str = ' '.join(str(x) for x in value['target_data'].flatten())
+
+            line = f"{common_data_id_str} {time_str} {input_data_str} {target_data_str}\n"
+            file.write(line)
 
     print()
-    print("Number of data loaded:", len(data.common_data))
+    print("Number of data loaded:", len(all_common_data))
+
+
+def data_reader(data, isTest=False, shuffle=2, batch_size=0):
+    save_data_from_files(data, isTest=isTest, shuffle=shuffle)
+    data.common_data = {}
+
+    with open('all_common_data.txt', 'r') as file:
+        for _ in range(batch_size):
+            line = file.readline().strip()
+            elements = line.split()
+            # print(len(elements))  # test code
+
+            common_data_id = int(elements[0])
+            time = elements[1]
+            input_data = elements[2:22]
+            input_data = np.array(input_data, dtype=float)
+
+            target_data = elements[22:]
+            target_data = np.array(target_data, dtype=float)
+            target_data = np.reshape(target_data, (32, 64))
+
+            data.common_data[common_data_id] = {
+                'time': time,
+                'input_data': input_data,
+                'target_data': target_data
+            }
 
     return data
 
@@ -226,7 +260,7 @@ class TurbDataset(Dataset):
     TEST = 2
 
     def __init__(self, mode=TRAIN, dataDir="./dataset/for_train/", dataDirTest="./dataset/for_test/",
-                 shuffle=3):
+                 shuffle=3, batch_size=5):
         global removePOffset, pressureNormalization
         """
         :param dataProp: for split&mix from multiple dirs, see LoaderNormalizer; None means off
@@ -243,7 +277,7 @@ class TurbDataset(Dataset):
         self.dataDir = dataDir
         self.dataDirTest = dataDirTest  # only for mode==self.TEST
 
-        self = save_data_from_files(self, isTest=(mode == self.TEST), shuffle=shuffle)
+        self = data_reader(self, isTest=(mode == self.TEST), shuffle=shuffle, batch_size=batch_size)
 
         # load & normalize data
         self = loader_normalizer(self)
