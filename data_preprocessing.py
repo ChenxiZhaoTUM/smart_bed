@@ -277,7 +277,7 @@ class PresDataset(Dataset):
         self.dataDirTest = dataDirTest  # only for mode==self.TEST
 
         save_data_from_files(self, isTest=(mode == self.TEST), shuffle=shuffle)
-        self.common_data = {}
+        self.common_data = {}  # should be push_back with input_data and target_data in getitem
 
         # self = data_reader(self, isTest=(mode == self.TEST), shuffle=shuffle, batch_size=size)
 
@@ -308,9 +308,6 @@ class PresDataset(Dataset):
             self.valiLength = self.totalLength - targetLength
             self.totalLength = targetLength
 
-            ######### test code ########
-            # print(len(self.valiTargets))
-
         else:
             self.testInputs = []
             self.testTargets = []
@@ -333,11 +330,6 @@ class PresDataset(Dataset):
 
     def denormalize(self, np_array):
         denormalized_data = np_array * (self.target_max - self.target_min) + self.target_min
-
-        ######### test code ########
-        # print(denormalized_data)
-        # print(self.target_max)
-        # print(self.target_min)
 
         return denormalized_data
 
